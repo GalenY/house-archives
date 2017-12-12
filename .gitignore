@@ -1,0 +1,10 @@
+# System Files
+.DS_Store
+
+# Python Environment
+env/
+.idea/
+
+# Compiled Code
+__pycache__/
+*.py[cod]
