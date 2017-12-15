@@ -9,5 +9,8 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login = LoginManager(app)
+# tells flask which view function is responsible for logins, pages that require you to be logged in to view will first
+# redirect you to this function, and then after logging in, back to the initially requested page
+login.login_view = 'login'
 
 from app import routes, models
