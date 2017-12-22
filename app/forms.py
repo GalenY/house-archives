@@ -29,3 +29,5 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Please use a different email address.')
 
 
+class VideoUploadForm(FlaskForm):
+    pass

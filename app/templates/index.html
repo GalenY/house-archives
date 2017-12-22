@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block content %}
+{% block app_content %}
     <h1>Header</h1>
     {% if not current_user.is_anonymous %}
     <p>Hello {{ current_user.username }}!</p>

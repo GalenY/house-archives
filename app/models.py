@@ -3,7 +3,7 @@ from app import db, login
 from flask_login import UserMixin
 from werkzeug import generate_password_hash, check_password_hash
 from hashlib import md5
-
+import requests
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,4 +44,57 @@ class Post(db.Model):
         return '<Post {}>'.format(self.body)
 
 
+
+'''
+class YouTube(db.Model):
+    # Table Attributes
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String)
+    title = db.Column(db.String(100))
+
+    prefixes = ['https://youtu.be/', 'https://www.youtube.com/watch?v=']
+
+    @classmethod
+    def valid_url(cls, full_url):
+        if any((full_url.startswith(prefix) for prefix in cls.prefixes)):
+            r = requests.get(full_url)
+            if r.status_code == 200:
+                if len(r.json()['items']) == 1:
+                    return True
+        return False
+
+
+    def initializer(self,):
+        if full_url.startswith(cls.prefixes[0]):
+            if full_url.find('?') != -1:
+                vid_id = full_url[17:full_url.find('?')]
+            else:
+                vid_id = full_url[17:]
+
+        elif self.full_url.start
+
+    def get_embed(self, start_time=False, autoplay=False):
+
+
+
+class Video(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(400), unique=True)
+    title =
+
+
+function playsong() {
+	document.getElementById("player").src="https://www.youtube.com/embed/7Cz3CHpVSeA?autoplay=1";
+}
+
+
+
+YouTube ()
+
+Music ( Title(if not specified, default to scraping it from soundcloud or youtube), Artist(optional), tags/genres/styles(optional), uploaded_by, URL/type,)
+
+Video ( Title(if not specified, default to youtube title), Dancers(Users), Song(more thought for this), style, tags, uploaded_by, YouTube URL)
+
+User/Dancer (id, username, email, password, about_me, last_seen, name, crew, favorite/highest_rated_videos, favorite/highest_rated_songs, videos_of_me(link to filtered videos page), showcase_video, facebook, twitter, instagram, youtube,)
+'''
 
