@@ -4,6 +4,8 @@ from flask_login import UserMixin
 from werkzeug import generate_password_hash, check_password_hash
 from hashlib import md5
 import requests
+from urllib.parse import urlparse, parse_qs, urlencode
+from app import app
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -13,6 +15,7 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', backref='author', lazy='dynamic')
     about_me = db.Column(db.String(300))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    song_ratings = db.relationship('SongRating', back_populates='user')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
@@ -45,38 +48,126 @@ class Post(db.Model):
 
 
 
-'''
-class YouTube(db.Model):
-    # Table Attributes
+
+class Youtube(db.Model):
+    __tablename__ = 'youtube'
     id = db.Column(db.Integer, primary_key=True)
-    url = db.Column(db.String)
-    title = db.Column(db.String(100))
+    youtube_id = db.Column(db.String(12))
+    title = db.Column(db.String(100), index=True)
+    start_time_seconds = db.Column(db.Integer)
+    duration = db.Column(db.String(8))
+    duration_seconds = db.Column(db.Integer)
+    type = db.Column(db.String(30))
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'youtube',
+        'polymorphic_on': 'type'
+    }
 
     prefixes = ['https://youtu.be/', 'https://www.youtube.com/watch?v=']
+    api_key = app.config['YOUTUBE_API_KEY']
 
-    @classmethod
-    def valid_url(cls, full_url):
-        if any((full_url.startswith(prefix) for prefix in cls.prefixes)):
-            r = requests.get(full_url)
+    def __repr__(self):
+        return '<Youtube {}>'.format(self.title if self.title else 'Untitled')
+
+
+    @staticmethod
+    def valid_url(url):
+        if any((url.startswith(prefix) for prefix in Youtube.prefixes)):
+            r = requests.get(url)
             if r.status_code == 200:
-                if len(r.json()['items']) == 1:
-                    return True
+                r = requests.get('https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}'.format(
+                    Youtube.get_query_string_dict(url).get('v')[0], Youtube.api_key))
+                if r.status_code == 200:
+                    if len(r.json()['items']) == 1:
+                        return True
         return False
 
-
-    def initializer(self,):
-        if full_url.startswith(cls.prefixes[0]):
-            if full_url.find('?') != -1:
-                vid_id = full_url[17:full_url.find('?')]
+    @staticmethod
+    def get_query_string_dict(youtube_url):
+        qs = parse_qs(urlparse(youtube_url).query)
+        if qs.get('v') == None and youtube_url.startswith(Youtube.prefixes[0]):
+            if youtube_url.find('?') != -1:
+                qs['v'] = [youtube_url[17:youtube_url.find('?')]]
             else:
-                vid_id = full_url[17:]
+                qs['v'] = [youtube_url[17:]]
+        return qs
 
-        elif self.full_url.start
+    def set_values(self, url):
+        qs = self.get_query_string_dict(url)
+        self.youtube_id = qs['v'][0]
+        if qs.get('t'):
+            self.start_time_seconds = qs.get('t')[0]
+        else:
+            self.start_time_seconds = 0
 
-    def get_embed(self, start_time=False, autoplay=False):
+        # get info about video using youtube api
+        json = requests.get(
+            'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={}&key={}'.format(
+                self.youtube_id, self.api_key)).json()
+        self.title = json['items'][0]['snippet']['title']
+
+        # setting self.duration and self.duration_seconds
+        d = json['items'][0]['contentDetails']['duration'][2:]
+        duration_seconds = 0
+        index = d.find('H')
+        if index != -1:
+            duration_seconds += 3600 * int(d[:index])
+            d = d[index + 1:]
+        index = d.find('M')
+        if index != -1:
+            duration_seconds += 60 * int(d[:index])
+            d = d[index + 1:]
+        index = d.find('S')
+        if index != -1:
+            duration_seconds += int(d[:index])
+
+        hours, remaining_seconds = divmod(duration_seconds, 3600)
+        minutes, seconds = divmod(remaining_seconds, 60)
+        if hours > 0:
+            duration = '{}:{}:{}'.format(hours, minutes, seconds)
+        else:
+            duration = '{}:{}'.format(minutes, seconds)
+
+        self.duration_seconds = duration_seconds
+        self.duration = duration
 
 
 
+
+    def get_embed(self, start_time=0, autoplay=0):
+        url = 'https://www.youtube.com/embed/' + self.youtube_id + '?'
+        url += urlencode({'start': start_time, 'autoplay': autoplay})
+        return url
+
+
+class Song(Youtube):
+    rating = db.Column(db.Float)
+    ratings = db.relationship('SongRating', back_populates='song')
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'song'
+    }
+
+    def __repr__(self):
+        return '<Song {}>'.format(self.title if self.title else 'Untitled')
+
+    def update_rating(self):
+        pass
+
+
+class SongRating(db.Model):
+    __tablename__ = 'songrating'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    song_id = db.Column(db.Integer, db.ForeignKey('youtube.id'), primary_key=True)
+    rating = db.Column(db.Float)
+    user = db.relationship('User', back_populates='song_ratings')
+    song = db.relationship('Song', back_populates='ratings')
+
+    def __repr__(self):
+        return '<SongRating(user_id={}, song_id={}, rating={})>'.format(self.user_id, self.song_id, self.rating)
+
+'''
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(400), unique=True)

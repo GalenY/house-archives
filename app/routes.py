@@ -1,8 +1,8 @@
 from flask import render_template, flash, redirect, url_for, request
 from app import app, db
-from app.forms import LoginForm, RegistrationForm
+from app.forms import LoginForm, RegistrationForm, AddSongForm
 from flask_login import current_user, login_user, logout_user, login_required
-from app.models import User
+from app.models import User, Youtube
 from datetime import datetime
 
 @app.before_request
@@ -16,6 +16,7 @@ def before_request():
 @login_required
 def index():
     return render_template('index.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -67,3 +68,21 @@ def user(username):
         {'author': user, 'body': 'Test post #2'}
     ]
     return render_template('user.html', user=user, posts=posts)
+
+@app.route('/music', methods=['GET', 'POST'])
+@login_required
+def music():
+    form = AddSongForm()
+    if form.validate_on_submit():
+        song = Youtube()
+        song.set_values(form.url.data)
+        db.session.add(song)
+        db.session.commit()
+        flash('{} was successfully added!'.format(song.title), 'alert alert-success')
+
+    return render_template('music.html', form=form, youtubes=Youtube.query.all())
+
+@app.route('/search_music', methods=['POST'])
+@login_required
+def search_music():
+    pass

@@ -1,30 +1,88 @@
 {% extends 'bootstrap/base.html' %}
 
 {% block navbar %}
-<div>
-    House Blueprints
-    <a href="{{ url_for('index') }}">Home</a>
-    {% if current_user.is_anonymous %}
-    <a href="{{ url_for('login') }}">Login</a>
-    <a href="{{ url_for('register') }}">Register</a>
-    {% else %}
-    <a href="{{ url_for('user', username=current_user.username) }}">Profile</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
-    {% endif %}
-</div>
+
+
+</nav>
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Brand</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li><a id="index" href="{{ url_for('index') }}">Home<span class="sr-only">(current)</span></a></li>
+        {% if current_user.is_anonymous %}
+        <li><a id="login" href="{{ url_for('login') }}">Login</a></li>
+        <li><a id="register" href="{{ url_for('register') }}">Register</a></li>
+        {% else %}
+        <li><a id="music" href="{{ url_for('music') }}">Music</a></li>
+        <li><a id="user" href="{{ url_for('user', username=current_user.username) }}">Profile</a></li>
+        <li><a id="logout" href="{{ url_for('logout') }}">Logout</a></li>
+        {% endif %}
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Action</a></li>
+            <li><a href="#">Another action</a></li>
+            <li><a href="#">Something else here</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="#">Separated link</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="#">One more separated link</a></li>
+          </ul>
+        </li>
+      </ul>
+      <form class="navbar-form navbar-left">
+        <div class="form-group">
+          <input type="text" class="form-control" placeholder="Search">
+        </div>
+        <button type="submit" class="btn btn-default">Submit</button>
+      </form>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">Link</a></li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Action</a></li>
+            <li><a href="#">Another action</a></li>
+            <li><a href="#">Something else here</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="#">Separated link</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
 {% endblock %}
 
 {% block content %}
     <div class="container">
     {% with messages = get_flashed_messages(with_categories=True) %}
     {% if messages %}
-    <ul>
         {% for category, message in messages %}
-        <li class="{{ category }}">{{ message }}</li>
+        <div class="{{ category }}">{{ message }}</div>
         {% endfor %}
-    </ul>
     {% endif %}
     {% endwith %}
     {% block app_content %}{% endblock %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+      $(document).ready(function () {
+      $("#{{request.endpoint}}").parent().addClass("active"); })
+    </script>
 {% endblock %}
