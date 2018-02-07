@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bootstrap import Bootstrap
+from flask_mail import Mail
 import logging
 from logging.handlers import SMTPHandler
 
@@ -11,16 +12,16 @@ app = Flask(__name__)
 
 # setting the flask configuration variables from a custom object's attributes
 app.config.from_object(Config)
-
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login = LoginManager(app)
 
 # tells flask which view function is responsible for logins, pages that require you to be logged in to view will first
 # redirect you to this function, and then after logging in, back to the initially requested page
-login.login_view = 'login'
+login.login_view = 'auth.login'
 
 bootstrap = Bootstrap(app)
+mail = Mail(app)
 
 # set up email logging
 if not app.debug:
@@ -41,6 +42,11 @@ if not app.debug:
 
 
 
+from app.errors import bp as errors_bp
+app.register_blueprint(errors_bp)
+
+from app.auth import bp as auth_bp
+app.register_blueprint(auth_bp, url_prefix='/auth')
 
 
 # at the bottom to avoid circular imports, apparently a common problem with flask apps

@@ -6,6 +6,9 @@ from hashlib import md5
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode
 from app import app
+from time import time
+import jwt
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,10 +34,25 @@ class User(UserMixin, db.Model):
         return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
             digest, size)
 
+    def get_reset_password_token(self, expires_in=600):
+        return jwt.encode(
+            {'reset_password': self.id, 'exp': time() + expires_in},
+            app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        try:
+            id = jwt.decode(token, app.config['SECRET_KEY'],
+                            algorithms=['HS256'])['reset_password']
+        except:
+            return
+        return User.query.get(id)
 
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+
 
 
 class Post(db.Model):
@@ -131,9 +149,6 @@ class Youtube(db.Model):
 
         self.duration_seconds = duration_seconds
         self.duration = duration
-
-
-
 
     def get_embed(self, start_time=0, autoplay=0):
         url = 'https://www.youtube.com/embed/' + self.youtube_id + '?'

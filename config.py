@@ -22,3 +22,4 @@ class Config(object):
     ADMINS = ['galenbenjaminyates@gmail.com']
 
     YOUTUBE_API_KEY = os.environ.get('youtube_api_key')
+    BRAND_NAME = os.environ.get('brand_name')
