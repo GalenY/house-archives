@@ -1,23 +1,24 @@
 from flask import render_template, flash, redirect, url_for, request
-from app import app, db
-from app.forms import AddSongForm
+from app import db
+from app.main import bp
+from app.main.forms import AddSongForm
 from flask_login import current_user, login_required
 from app.models import User, Youtube
 from datetime import datetime
 
-@app.before_request
+@bp.before_app_request
 def before_request():
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         db.session.commit()
 
-@app.route('/')
-@app.route('/index')
+@bp.route('/')
+@bp.route('/index')
 @login_required
 def index():
     return render_template('index.html')
 
-@app.route('/user/<username>')
+@bp.route('/user/<username>')
 @login_required
 def user(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -29,7 +30,7 @@ def user(username):
     ]
     return render_template('user.html', user=user, posts=posts)
 
-@app.route('/music', methods=['GET', 'POST'])
+@bp.route('/music', methods=['GET', 'POST'])
 @login_required
 def music():
     form = AddSongForm()
@@ -42,7 +43,7 @@ def music():
 
     return render_template('music.html', form=form, youtubes=Youtube.query.all())
 
-@app.route('/search_music', methods=['POST'])
+@bp.route('/search_music', methods=['POST'])
 @login_required
 def search_music():
     pass

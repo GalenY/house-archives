@@ -1,11 +1,11 @@
 from datetime import datetime
 from app import db, login
 from flask_login import UserMixin
+from flask import current_app
 from werkzeug import generate_password_hash, check_password_hash
 from hashlib import md5
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode
-from app import app
 from time import time
 import jwt
 
@@ -37,12 +37,12 @@ class User(UserMixin, db.Model):
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
             {'reset_password': self.id, 'exp': time() + expires_in},
-            app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+            current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
 
     @staticmethod
     def verify_reset_password_token(token):
         try:
-            id = jwt.decode(token, app.config['SECRET_KEY'],
+            id = jwt.decode(token, current_app.config['SECRET_KEY'],
                             algorithms=['HS256'])['reset_password']
         except:
             return
@@ -83,7 +83,6 @@ class Youtube(db.Model):
     }
 
     prefixes = ['https://youtu.be/', 'https://www.youtube.com/watch?v=']
-    api_key = app.config['YOUTUBE_API_KEY']
 
     def __repr__(self):
         return '<Youtube {}>'.format(self.title if self.title else 'Untitled')
@@ -95,7 +94,7 @@ class Youtube(db.Model):
             r = requests.get(url)
             if r.status_code == 200:
                 r = requests.get('https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}'.format(
-                    Youtube.get_query_string_dict(url).get('v')[0], Youtube.api_key))
+                    Youtube.get_query_string_dict(url).get('v')[0], current_app.config['YOUTUBE_API_KEY']))
                 if r.status_code == 200:
                     if len(r.json()['items']) == 1:
                         return True
@@ -122,7 +121,7 @@ class Youtube(db.Model):
         # get info about video using youtube api
         json = requests.get(
             'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={}&key={}'.format(
-                self.youtube_id, self.api_key)).json()
+                self.youtube_id, current_app.config['YOUTUBE_API_KEY'])).json()
         self.title = json['items'][0]['snippet']['title']
 
         # setting self.duration and self.duration_seconds
