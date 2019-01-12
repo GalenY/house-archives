@@ -10,5 +10,6 @@ class AddSongForm(FlaskForm):
 
     def validate_url(self, url):
         if not Youtube.valid_url(url.data):
+            # raise Exception('didn\'t work')
             raise ValidationError('There was a problem with the URL. Please enter the URL of a single Youtube video.')
 

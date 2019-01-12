@@ -5,6 +5,7 @@ from flask import current_app
 from werkzeug import generate_password_hash, check_password_hash
 from hashlib import md5
 import requests
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, urlencode
 from time import time
 import jwt
@@ -82,7 +83,7 @@ class Youtube(db.Model):
         'polymorphic_on': 'type'
     }
 
-    prefixes = ['https://youtu.be/', 'https://www.youtube.com/watch?v=']
+    url_prefixes = ['https://youtu.be/', 'https://www.youtube.com/watch?v=']
 
     def __repr__(self):
         return '<Youtube {}>'.format(self.title if self.title else 'Untitled')
@@ -90,27 +91,35 @@ class Youtube(db.Model):
 
     @staticmethod
     def valid_url(url):
-        if any((url.startswith(prefix) for prefix in Youtube.prefixes)):
-            r = requests.get(url)
-            if r.status_code == 200:
-                r = requests.get('https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}'.format(
-                    Youtube.get_query_string_dict(url).get('v')[0], current_app.config['YOUTUBE_API_KEY']))
-                if r.status_code == 200:
-                    if len(r.json()['items']) == 1:
-                        return True
+        if any((url.startswith(prefix) for prefix in Youtube.url_prefixes)):
+            # check if given url is valid
+            if requests.get(url).status_code == 200:
+                # check if we can extract video id from url and then rebuild a valid url from it
+                if requests.get(Youtube.url_prefixes[1] + Youtube.get_query_string_dict(url).get('v')[0]).status_code == 200:
+                    return True
+
         return False
+
+        # This code checked the validity of the url using the youtube api
+        #
+        # r = requests.get('https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}'.format(
+        #     Youtube.get_query_string_dict(url).get('v')[0], current_app.config['YOUTUBE_API_KEY']))
+        # if r.status_code == 200:
+        #     if len(r.json()['items']) == 1:
+        #         return True
+
 
     @staticmethod
     def get_query_string_dict(youtube_url):
         qs = parse_qs(urlparse(youtube_url).query)
-        if qs.get('v') == None and youtube_url.startswith(Youtube.prefixes[0]):
+        if qs.get('v') == None and youtube_url.startswith(Youtube.url_prefixes[0]):
             if youtube_url.find('?') != -1:
                 qs['v'] = [youtube_url[17:youtube_url.find('?')]]
             else:
                 qs['v'] = [youtube_url[17:]]
         return qs
 
-    def set_values(self, url):
+    def set_values(self, url, using_api=False):
         qs = self.get_query_string_dict(url)
         self.youtube_id = qs['v'][0]
         if qs.get('t'):
@@ -118,36 +127,59 @@ class Youtube(db.Model):
         else:
             self.start_time_seconds = 0
 
-        # get info about video using youtube api
-        json = requests.get(
-            'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={}&key={}'.format(
-                self.youtube_id, current_app.config['YOUTUBE_API_KEY'])).json()
-        self.title = json['items'][0]['snippet']['title']
+        # get title and duration info about video using youtube api
+        if using_api:
+            json = requests.get(
+                'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={}&key={}'.format(
+                    self.youtube_id, current_app.config['YOUTUBE_API_KEY'])).json()
+            try:
+                self.title = json['items'][0]['snippet']['title']
+            except:
+                pass
 
-        # setting self.duration and self.duration_seconds
-        d = json['items'][0]['contentDetails']['duration'][2:]
-        duration_seconds = 0
-        index = d.find('H')
-        if index != -1:
-            duration_seconds += 3600 * int(d[:index])
-            d = d[index + 1:]
-        index = d.find('M')
-        if index != -1:
-            duration_seconds += 60 * int(d[:index])
-            d = d[index + 1:]
-        index = d.find('S')
-        if index != -1:
-            duration_seconds += int(d[:index])
+            try:
+                # duration string in youtube format e.g. "PT1H54M7S"
+                d = json['items'][0]['contentDetails']['duration']
+            except:
+                d = None
 
-        hours, remaining_seconds = divmod(duration_seconds, 3600)
-        minutes, seconds = divmod(remaining_seconds, 60)
-        if hours > 0:
-            duration = '{}:{}:{}'.format(hours, minutes, seconds)
+        # scraping title and duration info instead
         else:
-            duration = '{}:{}'.format(minutes, seconds)
+            r = requests.get(url)
+            if r.status_code == 200:
+                soup = BeautifulSoup(r.text, 'html.parser')
+                title = soup.find('meta', attrs={"itemprop": "name"}).get('content')
+                if title:
+                    self.title = title
+                # duration string in youtube format e.g. "PT1H54M7S"
+                d = soup.find('meta', attrs={"itemprop": "duration"}).get('content')
 
-        self.duration_seconds = duration_seconds
-        self.duration = duration
+        # if we found a duration string in youtube format e.g. "PT1H54M7S"
+        if d:
+            # setting self.duration and self.duration_seconds
+            duration_seconds = 0
+            d = d[2:]
+            index = d.find('H')
+            if index != -1:
+                duration_seconds += 3600 * int(d[:index])
+                d = d[index + 1:]
+            index = d.find('M')
+            if index != -1:
+                duration_seconds += 60 * int(d[:index])
+                d = d[index + 1:]
+            index = d.find('S')
+            if index != -1:
+                duration_seconds += int(d[:index])
+
+            hours, remaining_seconds = divmod(duration_seconds, 3600)
+            minutes, seconds = divmod(remaining_seconds, 60)
+            if hours > 0:
+                duration = '{}:{}:{}'.format(hours, minutes, seconds)
+            else:
+                duration = '{}:{}'.format(minutes, seconds)
+
+            self.duration_seconds = duration_seconds
+            self.duration = duration
 
     def get_embed(self, start_time=0, autoplay=0):
         url = 'https://www.youtube.com/embed/' + self.youtube_id + '?'

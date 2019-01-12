@@ -5,6 +5,7 @@
 .DS_Store
 
 # Python Environment
+venv/
 env/
 .idea/
 
