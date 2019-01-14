@@ -16,10 +16,10 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
-    posts = db.relationship('Post', backref='author', lazy='dynamic')
     about_me = db.Column(db.String(300))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     song_ratings = db.relationship('SongRating', back_populates='user')
+    youtube_uploads = db.relationship('Youtube', back_populates='uploaded_by')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
@@ -58,7 +58,7 @@ def load_user(id):
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    body = db.Column(db.String(140))
+    body = db.Column(db.String(140), nullable=False)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
@@ -76,6 +76,8 @@ class Youtube(db.Model):
     start_time_seconds = db.Column(db.Integer)
     duration = db.Column(db.String(8))
     duration_seconds = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    uploaded_by = db.relationship('User', back_populates='youtube_uploads')
     type = db.Column(db.String(30))
 
     __mapper_args__ = {
@@ -201,12 +203,17 @@ class Song(Youtube):
     def update_rating(self):
         pass
 
+    def rate_song(self, user):
+        if self in user.song_ratings:
+            pass
+
+
 
 class SongRating(db.Model):
     __tablename__ = 'songrating'
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     song_id = db.Column(db.Integer, db.ForeignKey('youtube.id'), primary_key=True)
-    rating = db.Column(db.Float)
+    rating = db.Column(db.Float, nullable=False)
     user = db.relationship('User', back_populates='song_ratings')
     song = db.relationship('Song', back_populates='ratings')
 
