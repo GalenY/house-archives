@@ -71,11 +71,11 @@ class Post(db.Model):
 class Youtube(db.Model):
     __tablename__ = 'youtube'
     id = db.Column(db.Integer, primary_key=True)
-    youtube_id = db.Column(db.String(12))
+    youtube_id = db.Column(db.String(12), index=True)
     title = db.Column(db.String(100), index=True)
     start_time_seconds = db.Column(db.Integer)
     duration = db.Column(db.String(8))
-    duration_seconds = db.Column(db.Integer)
+    duration_seconds = db.Column(db.Integer, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     uploaded_by = db.relationship('User', back_populates='youtube_uploads')
     type = db.Column(db.String(30))
@@ -190,7 +190,7 @@ class Youtube(db.Model):
 
 
 class Song(Youtube):
-    rating = db.Column(db.Float)
+    rating = db.Column(db.Float, index=True)
     ratings = db.relationship('SongRating', back_populates='song')
 
     __mapper_args__ = {
@@ -203,9 +203,15 @@ class Song(Youtube):
     def update_rating(self):
         pass
 
-    def rate_song(self, user):
-        if self in user.song_ratings:
-            pass
+    def rate_song(self, user, rating):
+        song_rating = SongRating.query.filter_by(song=self).filter_by(user=user).first()
+        if song_rating:
+            #sql update
+            return
+        else:
+            song_rating = SongRating()
+            return
+
 
 
 

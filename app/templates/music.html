@@ -3,7 +3,7 @@
 
 {% block app_content %}
     <div class="embed-responsive embed-responsive-16by9">
-        <iframe id="player" src="https://www.youtube.com/embed/2XjlhSFjnOo" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+        <iframe id="player" src="https://www.youtube.com/embed/2XjlhSFjnOo" data-now-playing="" frameborder="0" allow="encrypted-media" allowfullscreen></iframe>
     </div>
     <div class="row">
         <div class="col-md-4">
@@ -19,7 +19,7 @@
     <div class="row">
         <div class="col-md-5">{{ youtube.title }}</div>
         <div class="col-md-2">{{ youtube.duration }}</div>
-        <div class="col-md-1"><button class="btn btn-default" type="button" onclick="playsong('{{ youtube.get_embed(autoplay=1) }}')">Play Song</button></div>
+        <div class="col-md-1"><button class="btn btn-default play-button" type="button" data-url="{{ youtube.get_embed(autoplay=1) }}" data-title="{{ youtube.title }}">Play Song</button></div>
     </div>
     <hr>
     {% endfor %}
@@ -29,8 +29,15 @@
 {% block scripts %}
     {{ super() }}
     <script>
-    function playsong(url) {
-	    document.getElementById("player").src=url;
+    const player = document.getElementById("player");
+
+    function playsong(url, title) {
+        player.src = url;
+        player.dataset.nowPlaying = title;
     }
+
+    let buttons = document.querySelectorAll('button.play-button');
+    buttons.forEach((button) => button.addEventListener("click", (event) => playsong(event.target.dataset.url, event.target.dataset.title)));
+
     </script>
 {% endblock %}

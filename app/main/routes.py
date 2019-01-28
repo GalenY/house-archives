@@ -49,5 +49,14 @@ def search_music():
     pass
 
 
+@bp.route('/rate-song', methods=['POST'])
+@login_required
+def rate_song():
+    if current_user == User.query.filter(User.username.like('Galen')).first():
+        return 'Galen is trying to rate a song'
+    else:
+        return 'Sorry you\'re not Galen'
+
+
 
 
